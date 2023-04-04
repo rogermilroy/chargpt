@@ -19,6 +19,8 @@ from torch import Tensor
 
 
 class Tokenizer(ABC):
+    vocab_size: int
+
     @abstractmethod
     def fit(self, data):
         ...
@@ -48,6 +50,7 @@ class IndexTokenizer(Tokenizer):
         chars = sorted(list(set(data)))
         self.str_to_tok = {ch: i for i, ch in enumerate(chars)}
         self.tok_to_str = {i: ch for i, ch in enumerate(chars)}
+        self.vocab_size = len(chars)
         print(f"Vocab size: {len(chars)}")
         return self
 
