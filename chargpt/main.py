@@ -4,7 +4,7 @@ import torch
 from tqdm import tqdm
 
 from dataset import BasicShakespeareDataset
-from model import BigramLanguageModel
+from model import BigramLanguageModel, AttentionLanguageModel
 from tokenizer import IndexTokenizer
 
 project_base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -38,42 +38,15 @@ def evaluate_val(model: BigramLanguageModel, dataset: BasicShakespeareDataset, e
 
 
 # TODO set up params better to use config for experimentation
-def train():
-
-    data_filename = os.path.join(project_base_dir, "data/input.txt")
-    tokenizer = IndexTokenizer()
-    context_len = 4
-    batch_size = 32
-    val_proportion = 0.1
-    validate_interval = 100
-    device = 'cpu'  # much faster on cpu until much larger model I think.
-    print(device)
-
-    dataset = BasicShakespeareDataset(
-        filename=data_filename,
-        tokenizer=tokenizer,
-        context_len=context_len,
-        batch_size=batch_size,
-        val_proportion=val_proportion,
-        device=device,
-    )
-
-    model = BigramLanguageModel(tokenizer.vocab_size).to(device)
-
-    inputs = torch.zeros((1, 1), dtype=torch.long, device=device)
-    print("Before\n#####")
-    print(tokenizer.decode(model.generate(inputs, max_new_tokens=100)[0]))
-    print("#####\n")
-
-    optimizer = torch.optim.AdamW(params=model.parameters(), lr=1e-3)
+def train_language_model(model, dataset, optimizer, eval_iters):
 
     loss = None
     losses = []
-    for step in tqdm(range(1000)):
+    for step in tqdm(range(iterations)):
         x, y = dataset.get_batch("train")
 
         if step % validate_interval == 0:
-            checkpoint_losses = evaluate_val(model=model, dataset=dataset, eval_iters=20)
+            checkpoint_losses = evaluate_val(model=model, dataset=dataset, eval_iters=eval_iters)
             losses.append(f"Step {step} Train loss: {checkpoint_losses['train']:.4f} | Val loss: {checkpoint_losses['val']:.4f}")
             # print(f"Val loss at {step}: {avg_val_loss}")
 
@@ -83,16 +56,65 @@ def train():
         loss = model.loss(logits, y)
         loss.backward()
         optimizer.step()
-    print(f'Final Loss: {loss.item()}')
+
+    return model, loss.item(), losses
+
+
+if __name__ == "__main__":
+    torch.manual_seed(42)
+
+    data_filename = os.path.join(project_base_dir, "data/input.txt")
+    tok = IndexTokenizer()
+
+    context_size = 64
+    batch_size = 64
+    embed_size = 16
+    head_size = 32
+    val_proportion = 0.1
+    validate_interval = 100
+    eval_iters = 50
+    iterations = 5000
+
+    lr = 1e-3
+
+    device = 'cpu'  # much faster on cpu until much larger model I think.
+    # device = available_device()
+    print(device)
+
+    dataset = BasicShakespeareDataset(
+        filename=data_filename,
+        tokenizer=tok,
+        n_context=context_size,
+        n_batch=batch_size,
+        val_proportion=val_proportion,
+        device=device,
+    )
+
+    model = AttentionLanguageModel(
+        context_size=context_size,
+        vocab_size=tok.vocab_size,
+        embed_size=embed_size,
+        head_size=head_size
+    )
+    model.to(device)
+
+    inputs = torch.zeros((1, 1), dtype=torch.long, device=device)
+    print("Before\n#####")
+    model.eval()
+    print(tok.decode(model.generate(inputs, max_new_tokens=100)[0]))
+    print("#####\n")
+
+    optimizer = torch.optim.AdamW(params=model.parameters(), lr=lr)
+
+    model.train()
+    trained_model, final_loss, losses = train_language_model(model=model, dataset=dataset, optimizer=optimizer, eval_iters=eval_iters)
+
+    print(f'Final Loss: {final_loss}')
     for item in losses:
         print(item)
 
     inputs = torch.zeros((1, 1), dtype=torch.long, device=device)
     print("\nAfter\n#####")
-    print(tokenizer.decode(model.generate(inputs, max_new_tokens=100)[0]))
+    trained_model.eval()
+    print(tok.decode(trained_model.generate(inputs, max_new_tokens=100)[0]))
     print("#####\n")
-
-
-if __name__ == "__main__":
-    torch.manual_seed(42)
-    train()

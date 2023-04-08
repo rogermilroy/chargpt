@@ -32,13 +32,22 @@ class BasicShakespeareDataset:
         self,
         filename,
         tokenizer: Tokenizer,
-        context_len: int,
-        batch_size: int,
+        n_context: int,
+        n_batch: int,
         val_proportion: float,
         device="cpu",
     ):
-        self.context_len = context_len
-        self.batch_size = batch_size
+        """
+        
+        :param filename: 
+        :param tokenizer: 
+        :param n_context: dimension of the context (ie. lenght of an input in time dimension)
+        :param n_batch: size of a batch
+        :param val_proportion: 
+        :param device: 
+        """
+        self.context_len = n_context
+        self.batch_size = n_batch
         self.tokenizer = tokenizer
         with open(filename, "r", encoding="utf8") as f:
             data = f.read()
@@ -86,8 +95,8 @@ if __name__ == "__main__":
     dataset = BasicShakespeareDataset(
         filename=data_filename,
         tokenizer=tokenizer,
-        context_len=context_len,
-        batch_size=batch_size,
+        n_context=context_len,
+        n_batch=batch_size,
         val_proportion=val_proportion,
     )
     x, y = dataset.get_batch(split="train")
