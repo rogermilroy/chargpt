@@ -74,7 +74,7 @@ class MultiHeadAttention(nn.Module):
 
     def forward(self, x):
         out = torch.cat([head(x) for head in self.heads], dim=-1)  # (B, T, H * N)
-        out = self.out_layer(out)
+        out = self.out_layer(out)  # (B, T, C)
         return out
 
 
@@ -101,15 +101,19 @@ class TransformerBlock(nn.Module):
             n_heads=n_heads,
             decoder=True,
         )
+        self.attention_norm = nn.LayerNorm(embed_size)
         self.feedforward = FeedforwardNet(
             embed_size=embed_size, hidden_size=hidden_size
         )
+        self.feedforward_norm = nn.LayerNorm(embed_size)
 
     def forward(self, x):
         # this time we will add the residual connections and norm layers
         # x is (B, T)
         x = x + self.attention_head(x)
+        x = self.attention_norm(x)
         out = x + self.feedforward(x)
+        out = self.feedforward_norm(out)
         return out
 
 
