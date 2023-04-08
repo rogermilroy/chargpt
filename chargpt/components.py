@@ -91,6 +91,28 @@ class FeedforwardNet(nn.Module):
         return self.net(x)
 
 
+class TransformerBlock(nn.Module):
+    def __init__(self, context_size, embed_size, head_size, n_heads, hidden_size):
+        super().__init__()
+        self.attention_head = MultiHeadAttention(
+            context_size=context_size,
+            embed_size=embed_size,
+            head_size=head_size,
+            n_heads=n_heads,
+            decoder=True,
+        )
+        self.feedforward = FeedforwardNet(
+            embed_size=embed_size, hidden_size=hidden_size
+        )
+
+    def forward(self, x):
+        # this time we will add the residual connections and norm layers
+        # x is (B, T)
+        x = x + self.attention_head(x)
+        out = x + self.feedforward(x)
+        return out
+
+
 if __name__ == "__main__":
     torch.manual_seed(42)
 

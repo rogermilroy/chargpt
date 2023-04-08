@@ -6,7 +6,7 @@ from tqdm import tqdm
 from dataset import BasicShakespeareDataset
 from model import (
     BigramLanguageModel,
-    MultiHeadAttentionFFLanguageModel,
+    TransformerSingleBlockLanguageModel,
 )
 from tokenizer import IndexTokenizer
 
@@ -101,7 +101,7 @@ if __name__ == "__main__":
         device=device,
     )
 
-    model = MultiHeadAttentionFFLanguageModel(
+    model = TransformerSingleBlockLanguageModel(
         context_size=context_size,
         vocab_size=tok.vocab_size,
         embed_size=embed_size,
