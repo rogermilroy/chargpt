@@ -77,8 +77,8 @@ if __name__ == "__main__":
 
     context_size = 16
     batch_size = 64
-    embed_size = 16
-    head_size = 8  # was 32 for single attention
+    embed_size = 32
+    head_size = 16  # was 32 for single attention
     n_heads = 4
     val_proportion = 0.1
     validate_interval = 500
