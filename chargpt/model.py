@@ -237,14 +237,21 @@ class MultiHeadAttentionFFLanguageModel(nn.Module):
         return x
 
 
-class TransformerSingleBlockLanguageModel(nn.Module):
+class TransformerMultiBlockLanguageModel(nn.Module):
     # B: batch size
     # T: time dimension - context_len
     # C: channels - n_embed (or head size of previous layer)
     # H: head dimension - head_size
 
     def __init__(
-        self, context_size, vocab_size, embed_size, head_size, n_heads, hidden_size
+        self,
+        context_size,
+        vocab_size,
+        embed_size,
+        head_size,
+        hidden_size,
+        n_heads,
+        n_blocks,
     ):
         """
 
@@ -260,12 +267,17 @@ class TransformerSingleBlockLanguageModel(nn.Module):
         self.head_size = head_size
         self.token_embedding = nn.Embedding(vocab_size, embed_size)
         self.position_embedding = nn.Embedding(context_size, embed_size)
-        self.transformer_block = TransformerBlock(
-            context_size=context_size,
-            embed_size=embed_size,
-            head_size=head_size,
-            n_heads=n_heads,
-            hidden_size=hidden_size,
+        self.transformer_blocks = nn.ModuleList(
+            [
+                TransformerBlock(
+                    context_size=context_size,
+                    embed_size=embed_size,
+                    head_size=head_size,
+                    n_heads=n_heads,
+                    hidden_size=hidden_size,
+                )
+            ]
+            * n_blocks
         )
         self.output_layer = nn.Linear(in_features=embed_size, out_features=vocab_size)
 
@@ -276,7 +288,8 @@ class TransformerSingleBlockLanguageModel(nn.Module):
         x = self.token_embedding(x)  # (B, T, C)
         pos = self.position_embedding(torch.arange(t, device=x.device))  # (T, C)
         x = x + pos
-        x = self.transformer_block(x)
+        for block in self.transformer_blocks:
+            x = block(x)
         out = self.output_layer(x)
         return out
 

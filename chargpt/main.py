@@ -6,7 +6,7 @@ from tqdm import tqdm
 from dataset import BasicShakespeareDataset
 from model import (
     BigramLanguageModel,
-    TransformerSingleBlockLanguageModel,
+    TransformerMultiBlockLanguageModel,
 )
 from tokenizer import IndexTokenizer
 
@@ -80,6 +80,7 @@ if __name__ == "__main__":
     hidden_size = 4 * embed_size
     head_size = 16  # was 32 for single attention
     n_heads = 4
+    n_blocks = 2
 
     val_proportion = 0.1
     validate_interval = 500
@@ -101,13 +102,14 @@ if __name__ == "__main__":
         device=device,
     )
 
-    model = TransformerSingleBlockLanguageModel(
+    model = TransformerMultiBlockLanguageModel(
         context_size=context_size,
         vocab_size=tok.vocab_size,
         embed_size=embed_size,
         head_size=head_size,
-        n_heads=n_heads,
         hidden_size=hidden_size,
+        n_heads=n_heads,
+        n_blocks=n_blocks,
     )
     model.to(device)
 
