@@ -16,7 +16,7 @@ print(x.shape)
 xav = torch.zeros(B, T, C)
 for batch in range(B):
     for time in range(T):
-        xav[batch, time] = torch.mean(x[batch, :time + 1], dim=0)
+        xav[batch, time] = torch.mean(x[batch, : time + 1], dim=0)
 print("Basic version")
 print(xav[0])
 
@@ -55,7 +55,7 @@ k = key(x)  # (B, T, C) -> (B, T, head_size)
 v = value(x)  # (B, T, C) -> (B, T, head_size)
 
 weights = q @ k.transpose(-2, -1)  # (B, T, head_size) @ (B, head_size, T) -> (B, T, T)
-weights = weights * head_size ** -0.5
+weights = weights * head_size**-0.5
 weights = torch.masked_fill(weights, tril == 0, float("-inf"))
 weights = F.softmax(weights, dim=-1)
 

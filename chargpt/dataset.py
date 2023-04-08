@@ -38,13 +38,13 @@ class BasicShakespeareDataset:
         device="cpu",
     ):
         """
-        
-        :param filename: 
-        :param tokenizer: 
+
+        :param filename:
+        :param tokenizer:
         :param n_context: dimension of the context (ie. lenght of an input in time dimension)
         :param n_batch: size of a batch
-        :param val_proportion: 
-        :param device: 
+        :param val_proportion:
+        :param device:
         """
         self.context_len = n_context
         self.batch_size = n_batch
@@ -52,12 +52,14 @@ class BasicShakespeareDataset:
         with open(filename, "r", encoding="utf8") as f:
             data = f.read()
         self.tokenizer.fit(data)
-        encoded_data = torch.tensor(self.tokenizer.encode(data), dtype=torch.long, device=device)
+        encoded_data = torch.tensor(
+            self.tokenizer.encode(data), dtype=torch.long, device=device
+        )
         # very simple train val split here - TODO improve
         self.train_data = encoded_data[
             : round(len(encoded_data) * (1 - val_proportion))
         ]
-        self.val_data = encoded_data[round(len(encoded_data) * val_proportion) + 1:]
+        self.val_data = encoded_data[round(len(encoded_data) * val_proportion) + 1 :]
 
     def get_batch(self, split: str) -> Tuple[Tensor, Tensor]:
         """
