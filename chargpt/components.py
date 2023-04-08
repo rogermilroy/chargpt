@@ -68,7 +68,7 @@ class MultiHeadAttention(nn.Module):
         )
         # this layer ensures that the output dim is always head_size. Is that what I want? maybe should be embed_size
         self.out_layer = nn.Linear(
-            in_features=head_size * n_heads, out_features=head_size
+            in_features=head_size * n_heads, out_features=embed_size
         )
 
     def forward(self, x):

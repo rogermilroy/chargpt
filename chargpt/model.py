@@ -127,9 +127,8 @@ class MultiHeadAttentionLanguageModel(nn.Module):
             n_heads=n_heads,
             decoder=True,
         )
-        self.output_layer = nn.Linear(
-            in_features=self.head_size, out_features=vocab_size
-        )
+        # self.feedforward = FeedforwardNet(embed_size=embed_size)
+        self.output_layer = nn.Linear(in_features=embed_size, out_features=vocab_size)
 
     def forward(self, x):
         # x is (B, T)
