@@ -10,7 +10,12 @@ class AttentionHead(nn.Module):
     # H: head dimension - head_size
 
     def __init__(
-        self, context_size: int, embed_size: int, head_size: int, decoder: True
+        self,
+        context_size: int,
+        embed_size: int,
+        head_size: int,
+        dropout: float,
+        decoder: True,
     ):
         super().__init__()
         self.head_size = head_size  # H
@@ -21,6 +26,7 @@ class AttentionHead(nn.Module):
         self.register_buffer(
             "mask", torch.tril(torch.ones(context_size, context_size))
         )  # (T, T)
+        self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x):
         _, T, _ = x.shape
@@ -36,6 +42,8 @@ class AttentionHead(nn.Module):
             weights = weights.masked_fill(self.mask[:T, :T] == 0, float("-inf"))
         # over the context_len dimension -> (B, context_len, context_len) with each row summing to 1
         weights = F.softmax(weights, dim=-1)  # (B, T, T)
+        # dropout over the weights (regularization) - todo maybe experiment with this more.
+        weights = self.dropout(weights)
         out = weights @ v  # (B, T, H)
         return out
 
@@ -53,6 +61,7 @@ class MultiHeadAttention(nn.Module):
         embed_size: int,
         head_size: int,
         n_heads: int,
+        dropout: float,
         decoder: True,
     ):
         super().__init__()
@@ -62,6 +71,7 @@ class MultiHeadAttention(nn.Module):
                 context_size=context_size,
                 embed_size=embed_size,
                 head_size=head_size,
+                dropout=dropout,
                 decoder=decoder,
             )
             for _ in range(n_heads)
@@ -71,20 +81,24 @@ class MultiHeadAttention(nn.Module):
         self.out_layer = nn.Linear(
             in_features=head_size * n_heads, out_features=embed_size
         )
+        # dropout overs the projection - todo experiment with this. Think about interpretability?
+        self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x):
-        out = torch.cat([head(x) for head in self.heads], dim=-1)  # (B, T, H * N)
-        out = self.out_layer(out)  # (B, T, C)
+        x = torch.cat([head(x) for head in self.heads], dim=-1)  # (B, T, H * N)
+        x = self.out_layer(x)  # (B, T, C)
+        out = self.dropout(x)
         return out
 
 
 class FeedforwardNet(nn.Module):
-    def __init__(self, embed_size, hidden_size):
+    def __init__(self, embed_size: int, hidden_size: int, dropout: float):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(in_features=embed_size, out_features=hidden_size),
             nn.ReLU(),
             nn.Linear(in_features=hidden_size, out_features=embed_size),
+            nn.Dropout(p=dropout),
         )
 
     def forward(self, x):
@@ -92,18 +106,29 @@ class FeedforwardNet(nn.Module):
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, context_size, embed_size, head_size, n_heads, hidden_size):
+    def __init__(
+        self,
+        context_size: int,
+        embed_size: int,
+        head_size: int,
+        hidden_size: int,
+        n_heads: int,
+        dropout: float,
+    ):
         super().__init__()
         self.attention_head = MultiHeadAttention(
             context_size=context_size,
             embed_size=embed_size,
             head_size=head_size,
             n_heads=n_heads,
+            dropout=dropout,
             decoder=True,
         )
         self.attention_norm = nn.LayerNorm(embed_size)
         self.feedforward = FeedforwardNet(
-            embed_size=embed_size, hidden_size=hidden_size
+            embed_size=embed_size,
+            hidden_size=hidden_size,
+            dropout=dropout,
         )
         self.feedforward_norm = nn.LayerNorm(embed_size)
 

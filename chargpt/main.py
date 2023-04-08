@@ -74,23 +74,25 @@ if __name__ == "__main__":
     data_filename = os.path.join(project_base_dir, "data/input.txt")
     tok = IndexTokenizer()
 
-    context_size = 16
-    batch_size = 64
-    embed_size = 32
+    context_size = 128
+    batch_size = 32
+    embed_size = 256
     hidden_size = 4 * embed_size
-    head_size = 16  # was 32 for single attention
+    head_size = 64  # was 32 for single attention
     n_heads = 4
     n_blocks = 2
+
+    dropout = 0.2
 
     val_proportion = 0.1
     validate_interval = 500
     eval_iters = 50
     iterations = 5000
 
-    lr = 1e-3
+    lr = 2e-4
 
-    device = "cpu"  # much faster on cpu until much larger model I think.
-    # device = available_device()
+    # device = "cpu"  # much faster on cpu until this size model. with these params cpu 8 mps 18
+    device = available_device()
     print(device)
 
     dataset = BasicShakespeareDataset(
@@ -110,6 +112,7 @@ if __name__ == "__main__":
         hidden_size=hidden_size,
         n_heads=n_heads,
         n_blocks=n_blocks,
+        dropout=dropout,
     )
     model.to(device)
 

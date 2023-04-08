@@ -252,6 +252,7 @@ class TransformerMultiBlockLanguageModel(nn.Module):
         hidden_size,
         n_heads,
         n_blocks,
+        dropout,
     ):
         """
 
@@ -275,6 +276,7 @@ class TransformerMultiBlockLanguageModel(nn.Module):
                     head_size=head_size,
                     n_heads=n_heads,
                     hidden_size=hidden_size,
+                    dropout=dropout,
                 )
             ]
             * n_blocks
