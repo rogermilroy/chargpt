@@ -110,10 +110,8 @@ class TransformerBlock(nn.Module):
     def forward(self, x):
         # this time we will add the residual connections and norm layers
         # x is (B, T)
-        x = x + self.attention_head(x)
-        x = self.attention_norm(x)
-        out = x + self.feedforward(x)
-        out = self.feedforward_norm(out)
+        x = x + self.attention_head(self.attention_norm(x))
+        out = x + self.feedforward(self.feedforward_norm(x))
         return out
 
 

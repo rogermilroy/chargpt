@@ -279,6 +279,7 @@ class TransformerMultiBlockLanguageModel(nn.Module):
             ]
             * n_blocks
         )
+        self.layer_norm = nn.LayerNorm(embed_size)
         self.output_layer = nn.Linear(in_features=embed_size, out_features=vocab_size)
 
     def forward(self, x):
@@ -290,6 +291,7 @@ class TransformerMultiBlockLanguageModel(nn.Module):
         x = x + pos
         for block in self.transformer_blocks:
             x = block(x)
+        x = self.layer_norm(x)
         out = self.output_layer(x)
         return out
 
