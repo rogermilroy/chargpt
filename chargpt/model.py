@@ -267,8 +267,8 @@ class TransformerMultiBlockLanguageModel(nn.Module):
         self.head_size = head_size
         self.token_embedding = nn.Embedding(vocab_size, embed_size)
         self.position_embedding = nn.Embedding(context_size, embed_size)
-        self.transformer_blocks = nn.ModuleList(
-            [
+        self.transformer_blocks = nn.Sequential(
+            *[
                 TransformerBlock(
                     context_size=context_size,
                     embed_size=embed_size,
@@ -289,8 +289,7 @@ class TransformerMultiBlockLanguageModel(nn.Module):
         x = self.token_embedding(x)  # (B, T, C)
         pos = self.position_embedding(torch.arange(t, device=x.device))  # (T, C)
         x = x + pos
-        for block in self.transformer_blocks:
-            x = block(x)
+        x = self.transformer_blocks(x)
         x = self.layer_norm(x)
         out = self.output_layer(x)
         return out
