@@ -77,6 +77,18 @@ class MultiHeadAttention(nn.Module):
         return out
 
 
+class FeedforwardNet(nn.Module):
+    def __init__(self, embed_size):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(in_features=embed_size, out_features=embed_size),
+            nn.ReLU(),
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+
 if __name__ == "__main__":
     torch.manual_seed(42)
 
