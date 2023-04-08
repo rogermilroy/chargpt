@@ -67,6 +67,7 @@ class MultiHeadAttention(nn.Module):
             for _ in range(n_heads)
         )
         # this layer ensures that the output dim is always head_size. Is that what I want? maybe should be embed_size
+        # seems like one rationale is that this projects back into the residual pathway. To do with gradients.
         self.out_layer = nn.Linear(
             in_features=head_size * n_heads, out_features=embed_size
         )
@@ -78,11 +79,12 @@ class MultiHeadAttention(nn.Module):
 
 
 class FeedforwardNet(nn.Module):
-    def __init__(self, embed_size):
+    def __init__(self, embed_size, hidden_size):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(in_features=embed_size, out_features=embed_size),
+            nn.Linear(in_features=embed_size, out_features=hidden_size),
             nn.ReLU(),
+            nn.Linear(in_features=hidden_size, out_features=embed_size),
         )
 
     def forward(self, x):

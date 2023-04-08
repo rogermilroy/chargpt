@@ -169,7 +169,9 @@ class MultiHeadAttentionFFLanguageModel(nn.Module):
     # C: channels - n_embed (or head size of previous layer)
     # H: head dimension - head_size
 
-    def __init__(self, context_size, vocab_size, embed_size, head_size, n_heads):
+    def __init__(
+        self, context_size, vocab_size, embed_size, head_size, n_heads, hidden_size
+    ):
         """
 
         :param context_size: dimension of the context (ie. length of an input string)
@@ -191,7 +193,9 @@ class MultiHeadAttentionFFLanguageModel(nn.Module):
             n_heads=n_heads,
             decoder=True,
         )
-        self.feedforward = FeedforwardNet(embed_size=embed_size)
+        self.feedforward = FeedforwardNet(
+            embed_size=embed_size, hidden_size=hidden_size
+        )
         self.output_layer = nn.Linear(in_features=embed_size, out_features=vocab_size)
 
     def forward(self, x):

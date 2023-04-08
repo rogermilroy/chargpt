@@ -77,8 +77,10 @@ if __name__ == "__main__":
     context_size = 16
     batch_size = 64
     embed_size = 32
+    hidden_size = 4 * embed_size
     head_size = 16  # was 32 for single attention
     n_heads = 4
+
     val_proportion = 0.1
     validate_interval = 500
     eval_iters = 50
@@ -105,13 +107,14 @@ if __name__ == "__main__":
         embed_size=embed_size,
         head_size=head_size,
         n_heads=n_heads,
+        hidden_size=hidden_size,
     )
     model.to(device)
 
     inputs = torch.zeros((1, 1), dtype=torch.long, device=device)
     print("Before\n#####")
     model.eval()
-    print(tok.decode(model.generate(inputs, max_new_tokens=100)[0]))
+    print(tok.decode(model.generate(inputs, max_new_tokens=200)[0]))
     print("#####\n")
 
     optimizer = torch.optim.AdamW(params=model.parameters(), lr=lr)
@@ -128,5 +131,5 @@ if __name__ == "__main__":
     inputs = torch.zeros((1, 1), dtype=torch.long, device=device)
     print("\nAfter\n#####")
     trained_model.eval()
-    print(tok.decode(trained_model.generate(inputs, max_new_tokens=100)[0]))
+    print(tok.decode(trained_model.generate(inputs, max_new_tokens=200)[0]))
     print("#####\n")
