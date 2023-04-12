@@ -1,0 +1,11 @@
+defaults:
+  - data: shakespeare
+  - model: gpt_small
+  - optimizer: adamw
+
+run:
+  validate_interval: 500
+  eval_iters: 50
+  iterations: 5000
+
+device: available # choice of available or directly set (cpu | cuda | mps)

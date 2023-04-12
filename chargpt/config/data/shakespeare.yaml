@@ -1,0 +1,5 @@
+data_dir: data
+data_filename: input.txt
+
+batch_size: 32
+val_proportion: 0.1

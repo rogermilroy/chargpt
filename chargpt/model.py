@@ -285,6 +285,7 @@ class TransformerMultiBlockLanguageModel(nn.Module):
             * n_blocks
         )
         self.layer_norm = nn.LayerNorm(embed_size)
+        # TODO tie these weights to token embedding
         self.output_layer = nn.Linear(in_features=embed_size, out_features=vocab_size)
 
     def forward(self, x):
