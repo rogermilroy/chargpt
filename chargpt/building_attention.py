@@ -1,7 +1,6 @@
 # testing code here
 import torch
-from torch.nn import Linear
-from torch.nn import functional as F
+from torch.nn import Linear, functional as F
 
 B, T, C = 4, 8, 2
 
@@ -40,7 +39,8 @@ print("Self Attention precursor")
 print(res[0])
 
 # basic self attention version
-# the idea is to have Queries and Keys and the agreement between them will become the weights.
+# the idea is to have Queries and Keys and the agreement between them will become the
+# weights.
 tril = torch.tril(torch.ones(T, T))
 
 head_size = 8

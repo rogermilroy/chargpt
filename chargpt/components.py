@@ -40,9 +40,11 @@ class AttentionHead(nn.Module):
         if self.decoder:
             # NOTE: T x T section of mask for flexibility in input dims.
             weights = weights.masked_fill(self.mask[:T, :T] == 0, float("-inf"))
-        # over the context_len dimension -> (B, context_len, context_len) with each row summing to 1
+        # over the context_len dimension -> (B, context_len, context_len) with each
+        # row summing to 1
         weights = F.softmax(weights, dim=-1)  # (B, T, T)
-        # dropout over the weights (regularization) - todo maybe experiment with this more.
+        # dropout over the weights (regularization)
+        # todo maybe experiment with this more.
         weights = self.dropout(weights)
         out = weights @ v  # (B, T, H)
         return out
@@ -76,12 +78,15 @@ class MultiHeadAttention(nn.Module):
             )
             for _ in range(n_heads)
         )
-        # this layer ensures that the output dim is always head_size. Is that what I want? maybe should be embed_size
-        # seems like one rationale is that this projects back into the residual pathway. To do with gradients.
+        # this layer ensures that the output dim is always head_size.  Is that what I
+        # want? maybe should be embed_size
+        # seems like one rationale is that this projects back into the residual
+        # pathway. To do with gradients.
         self.out_layer = nn.Linear(
             in_features=head_size * n_heads, out_features=embed_size
         )
-        # dropout overs the projection - todo experiment with this. Think about interpretability?
+        # dropout overs the projection -
+        # todo experiment with this. Think about interpretability?
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x):

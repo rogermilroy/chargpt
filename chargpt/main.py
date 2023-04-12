@@ -54,7 +54,8 @@ def train_language_model(model, dataset, optimizer, eval_iters):
                 model=model, dataset=dataset, eval_iters=eval_iters
             )
             losses.append(
-                f"Step {step} Train loss: {checkpoint_losses['train']:.4f} | Val loss: {checkpoint_losses['val']:.4f}"
+                f"Step {step} Train loss: {checkpoint_losses['train']:.4f} "
+                f"| Val loss: {checkpoint_losses['val']:.4f}"
             )
             # print(f"Val loss at {step}: {avg_val_loss}")
 
@@ -91,7 +92,8 @@ if __name__ == "__main__":
 
     lr = 2e-4
 
-    # device = "cpu"  # much faster on cpu until this size model. with these params cpu 8 mps 18
+    # much faster on cpu until this size model. with these params cpu 8 mps 18
+    # device = "cpu"
     device = available_device()
     print(device)
 

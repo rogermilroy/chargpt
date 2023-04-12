@@ -41,7 +41,8 @@ class BasicShakespeareDataset:
 
         :param filename:
         :param tokenizer:
-        :param n_context: dimension of the context (ie. lenght of an input in time dimension)
+        :param n_context: dimension of the context (i.e. length of an input in time
+        dimension)
         :param n_batch: size of a batch
         :param val_proportion:
         :param device:

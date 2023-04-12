@@ -13,7 +13,8 @@ from components import (
 class BigramLanguageModel(nn.Module):
     def __init__(self, vocab_size):
         super().__init__()
-        # vocab_size x vocab_size table (direct probs for each char based on previous char) like Q table.
+        # vocab_size x vocab_size table (direct probs for each char based on
+        # previous char) like Q table.
         self.token_embedding = nn.Embedding(
             num_embeddings=vocab_size, embedding_dim=vocab_size
         )
@@ -116,8 +117,9 @@ class MultiHeadAttentionLanguageModel(nn.Module):
         :param context_size: dimension of the context (ie. length of an input string)
         :param vocab_size: dimension of the vocabulary
         :param embed_size: dimension of the token and position embeddings
-        :param head_size: dimension of the attention head - usually computed from embed_size and n_heads -
-            embed_size // n_heads. Keeping separate for experimentation.
+        :param head_size: dimension of the attention head - usually computed from
+            embed_size and n_heads - embed_size // n_heads. Keeping separate for
+            experimentation.
         :param n_heads: number of attention heads
         """
         super().__init__()
@@ -182,8 +184,9 @@ class MultiHeadAttentionFFLanguageModel(nn.Module):
         :param context_size: dimension of the context (ie. length of an input string)
         :param vocab_size: dimension of the vocabulary
         :param embed_size: dimension of the token and position embeddings
-        :param head_size: dimension of the attention head - usually computed from embed_size and n_heads -
-            embed_size // n_heads. Keeping separate for experimentation.
+        :param head_size: dimension of the attention head - usually computed from
+            embed_size and n_heads - embed_size // n_heads. Keeping separate for
+            experimentation.
         :param n_heads: number of attention heads
         """
         super().__init__()
