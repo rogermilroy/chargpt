@@ -2,7 +2,7 @@
 
 defaults:
   - override /data: shakespeare
-  - override /model: gpt_small
+  - override /model: gpt_micro
   - override /optimizer: adamw
 
 context_size: 128
