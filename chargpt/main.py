@@ -3,6 +3,7 @@ import os
 
 import hydra
 import torch
+from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig
 
 from dataset import BasicShakespeareDataset
@@ -50,7 +51,11 @@ def evaluate_val(
 
 @hydra.main(version_base=None, config_path="config", config_name="config")
 def run_training(cfg: DictConfig):
-    logger.info(cfg)
+    out_dir = HydraConfig.get().runtime.output_dir
+    logger.debug(
+        f"CWD: {os.getcwd()}, project root: {project_base_dir}, output_dir: "
+        f"{out_dir}"
+    )
 
     data_filename = os.path.join(
         project_base_dir, f"{cfg['data']['data_dir']}/{cfg['data']['data_filename']}"
@@ -58,7 +63,7 @@ def run_training(cfg: DictConfig):
     tok = IndexTokenizer()
 
     device = available_device() if cfg["device"] == "available" else cfg["device"]
-    print(device)
+    logger.info(f"Device: {device}")
 
     dataset = BasicShakespeareDataset(
         filename=data_filename,
@@ -77,10 +82,10 @@ def run_training(cfg: DictConfig):
 
     #### Before sample #####
     inputs = torch.zeros((1, 1), dtype=torch.long, device=device)
-    print("Before\n#####")
+    logger.info("Before\n#####")
     model.eval()
-    print(tok.decode(model.generate(inputs, max_new_tokens=200)[0]))
-    print("#####\n")
+    logger.info(tok.decode(model.generate(inputs, max_new_tokens=200)[0]))
+    logger.info("#####\n")
     #### Before sample #####
 
     optimizer = torch.optim.AdamW(params=model.parameters(), **cfg["optimizer"])
@@ -93,18 +98,18 @@ def run_training(cfg: DictConfig):
         eval_fn=evaluate_val,
         **cfg["run"],
     )
-    torch.save(trained_model, "./final.pt")
+    torch.save(trained_model, os.path.join(os.getcwd(), "final.pt"))
 
-    print(f"Final Loss: {final_loss}")
+    logger.info(f"Final Loss: {final_loss}")
     for item in losses:
-        print(item)
+        logger.info(item)
 
     #### After sample #####
     inputs = torch.zeros((1, 1), dtype=torch.long, device=device)
-    print("\nAfter\n#####")
+    logger.info("\nAfter\n#####")
     trained_model.eval()
-    print(tok.decode(trained_model.generate(inputs, max_new_tokens=200)[0]))
-    print("#####\n")
+    logger.info(tok.decode(trained_model.generate(inputs, max_new_tokens=200)[0]))
+    logger.info("#####\n")
     #### After sample #####
 
 

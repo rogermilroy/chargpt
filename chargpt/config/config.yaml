@@ -9,3 +9,7 @@ run:
   iterations: 5000
 
 device: available # choice of available or directly set (cpu | cuda | mps)
+
+hydra:
+  job:
+    chdir: True
