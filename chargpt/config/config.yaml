@@ -4,11 +4,15 @@ defaults:
   - optimizer: adamw
 
 run:
+  validate: True
   validate_interval: 500
   eval_iters: 50
+  checkpoint: True
+  checkpoint_interval: 500
   iterations: 5000
 
 device: available # choice of available or directly set (cpu | cuda | mps)
+save_final: True
 
 hydra:
   job:

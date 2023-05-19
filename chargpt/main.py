@@ -7,6 +7,7 @@ from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig
 
 from dataset import BasicShakespeareDataset
+from hooks import Validate, Checkpoint
 from model import (
     BigramLanguageModel,
     TransformerMultiBlockLanguageModel,
@@ -90,15 +91,33 @@ def run_training(cfg: DictConfig):
 
     optimizer = torch.optim.AdamW(params=model.parameters(), **cfg["optimizer"])
 
+    post_hooks = list()
+    if cfg["run"]["validate"]:
+        post_hooks.append(
+            Validate(
+                eval_fn=evaluate_val,
+                eval_iters=cfg["run"]["eval_iters"],
+                validate_interval=cfg["run"]["validate_interval"],
+            )
+        )
+    if cfg["run"]["checkpoint"]:
+        os.makedirs(os.path.join(os.getcwd(), "models"), exist_ok=True)
+        post_hooks.append(
+            Checkpoint(checkpoint_interval=cfg["run"]["checkpoint_interval"])
+        )
+
     model.train()
     trained_model, final_loss, losses = train_language_model(
         model=model,
         dataset=dataset,
         optimizer=optimizer,
-        eval_fn=evaluate_val,
-        **cfg["run"],
+        post_hooks=post_hooks,
+        iterations=cfg["run"]["iterations"],
     )
-    torch.save(trained_model, os.path.join(os.getcwd(), "final.pt"))
+    if cfg["save_final"]:
+        torch.save(
+            trained_model, os.path.join(os.getcwd(), os.path.join("models", "final.pt"))
+        )
 
     logger.info(f"Final Loss: {final_loss}")
     for item in losses:
