@@ -83,10 +83,12 @@ def run_training(cfg: DictConfig):
 
     #### Before sample #####
     inputs = torch.zeros((1, 1), dtype=torch.long, device=device)
-    logger.info("Before\n#####")
     model.eval()
-    logger.info(tok.decode(model.generate(inputs, max_new_tokens=200)[0]))
-    logger.info("#####\n")
+    logger.info(
+        f"\n##### Before #####\n"
+        f"{tok.decode(model.generate(inputs, max_new_tokens=200)[0])}"
+        f"\n##### Before #####"
+    )
     #### Before sample #####
 
     optimizer = torch.optim.AdamW(params=model.parameters(), **cfg["optimizer"])
@@ -119,18 +121,21 @@ def run_training(cfg: DictConfig):
             trained_model, os.path.join(os.getcwd(), os.path.join("models", "final.pt"))
         )
 
-    logger.info(f"Final Loss: {final_loss}")
     for item in losses:
         logger.info(item)
+    logger.info(f"Final Loss: {final_loss}")
 
     #### After sample #####
     inputs = torch.zeros((1, 1), dtype=torch.long, device=device)
-    logger.info("\nAfter\n#####")
     trained_model.eval()
-    logger.info(tok.decode(trained_model.generate(inputs, max_new_tokens=200)[0]))
-    logger.info("#####\n")
+    logger.info(
+        f"\n##### After #####\n"
+        f"{tok.decode(trained_model.generate(inputs, max_new_tokens=200)[0])}"
+        f"\n##### After #####"
+    )
     #### After sample #####
 
 
 if __name__ == "__main__":
+    torch.manual_seed(42)
     run_training()
