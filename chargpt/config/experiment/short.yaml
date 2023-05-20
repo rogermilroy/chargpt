@@ -8,6 +8,7 @@ defaults:
 context_size: 128
 
 run:
-  validate_interval: 500
-  eval_iters: 50
+  validate:
+    validate_interval: 500
+    eval_iters: 50
   iterations: 1000

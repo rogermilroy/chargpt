@@ -98,15 +98,12 @@ def run_training(cfg: DictConfig):
         post_hooks.append(
             Validate(
                 eval_fn=evaluate_val,
-                eval_iters=cfg["run"]["eval_iters"],
-                validate_interval=cfg["run"]["validate_interval"],
+                **cfg["run"]["validate"],
             )
         )
     if cfg["run"]["checkpoint"]:
         os.makedirs(os.path.join(os.getcwd(), "models"), exist_ok=True)
-        post_hooks.append(
-            Checkpoint(checkpoint_interval=cfg["run"]["checkpoint_interval"])
-        )
+        post_hooks.append(Checkpoint(**cfg["run"]["checkpoint"]))
 
     model.train()
     trained_model, final_loss, losses = train_language_model(
