@@ -79,8 +79,20 @@ def run_training(cfg: DictConfig):
         context_size=cfg["context_size"],
         **cfg["model"],
     )
-
     model.to(device)
+
+    # try loading weights
+    if cfg["run"].get("resume") is not None:
+        checkpoint = torch.load(
+            os.path.join(project_base_dir, cfg["run"]["resume"]["path"])
+        )
+        model.load_state_dict(checkpoint["model_state_dict"])
+
+        optimizer = torch.optim.AdamW(params=model.parameters())
+        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+
+    else:
+        optimizer = torch.optim.AdamW(params=model.parameters(), **cfg["optimizer"])
 
     #### Before sample #####
     inputs = torch.zeros((1, 1), dtype=torch.long, device=device)
@@ -91,8 +103,6 @@ def run_training(cfg: DictConfig):
         f"\n##### Before #####"
     )
     #### Before sample #####
-
-    optimizer = torch.optim.AdamW(params=model.parameters(), **cfg["optimizer"])
 
     post_hooks = list()
     if cfg["run"]["validate"]:
