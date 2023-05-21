@@ -79,6 +79,7 @@ def run_training(cfg: DictConfig):
         context_size=cfg["context_size"],
         **cfg["model"],
     )
+
     model.to(device)
 
     #### Before sample #####
@@ -102,7 +103,7 @@ def run_training(cfg: DictConfig):
             )
         )
     if cfg["run"]["checkpoint"]:
-        os.makedirs(os.path.join(os.getcwd(), "models"), exist_ok=True)
+        os.makedirs(os.path.join(os.getcwd(), "checkpoints"), exist_ok=True)
         post_hooks.append(Checkpoint(**cfg["run"]["checkpoint"]))
 
     model.train()
@@ -115,7 +116,13 @@ def run_training(cfg: DictConfig):
     )
     if cfg["save_final"]:
         torch.save(
-            trained_model, os.path.join(os.getcwd(), os.path.join("models", "final.pt"))
+            {
+                "step": cfg["run"]["iterations"],
+                "model_state_dict": trained_model.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "loss": final_loss,
+            },
+            os.path.join(os.getcwd(), os.path.join("checkpoints", "final.pt")),
         )
 
     for item in losses:

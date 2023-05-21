@@ -13,7 +13,7 @@ class Validate:
         self.eval_iters = eval_iters
         self.validate_interval = validate_interval
 
-    def __call__(self, step, model, dataset, logits, loss, losses):
+    def __call__(self, step, model, dataset, optimizer, logits, loss, losses):
         if step % self.validate_interval == 0:
             checkpoint_losses = self.eval_fn(
                 model=model, dataset=dataset, eval_iters=self.eval_iters
@@ -28,11 +28,19 @@ class Checkpoint:
     def __init__(self, checkpoint_interval):
         self.checkpoint_interval = checkpoint_interval
 
-    def __call__(self, step, model, dataset, logits, loss, losses):
+    def __call__(self, step, model, dataset, optimizer, logits, loss, losses):
         if step % self.checkpoint_interval == 0:
             # create the checkpoint name - might want it to
-            checkpoint_name = os.path.join(
-                os.getcwd(), os.path.join("models", f"checkpoint_{step}.pt")
+            checkpoint_fname = os.path.join(
+                os.getcwd(), os.path.join("checkpoints", f"checkpoint_{step}.pt")
             )
             logger.debug("Saving checkpoint")
-            torch.save(model, checkpoint_name)
+            torch.save(
+                {
+                    "step": step,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "loss": loss,
+                },
+                checkpoint_fname,
+            )

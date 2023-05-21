@@ -27,6 +27,14 @@ def train_language_model(
 
         for hook in post_hooks:
             # TODO improve this to be less restrictive
-            hook(step, model, dataset, logits, loss, losses)
+            hook(
+                step=step,
+                model=model,
+                dataset=dataset,
+                optimizer=optimizer,
+                logits=logits,
+                loss=loss,
+                losses=losses,
+            )
 
     return model, loss.item(), losses
