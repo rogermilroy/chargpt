@@ -1,0 +1,6 @@
+embed_size: 128
+hidden_size: 512 # 4 * embed_size
+head_size: 32 # was 32 for single attention
+n_heads: 4
+n_blocks: 2
+dropout: 0.2

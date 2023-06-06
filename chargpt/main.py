@@ -1,16 +1,24 @@
+import logging
 import os
 
+import hydra
 import torch
-from tqdm import tqdm
+from hydra.core.hydra_config import HydraConfig
+from omegaconf import DictConfig
 
 from dataset import BasicShakespeareDataset
+from hooks import Validate, Checkpoint
 from model import (
     BigramLanguageModel,
     TransformerMultiBlockLanguageModel,
 )
 from tokenizer import IndexTokenizer
+from train import train_language_model
 
 project_base_dir = os.path.dirname(os.path.abspath(__file__))
+
+
+logger = logging.getLogger(__name__)
 
 
 def available_device() -> str:
@@ -42,99 +50,106 @@ def evaluate_val(
     return out
 
 
-# TODO set up params better to use config for experimentation
-def train_language_model(model, dataset, optimizer, eval_iters):
-    loss = None
-    losses = []
-    for step in tqdm(range(iterations)):
-        x, y = dataset.get_batch("train")
+@hydra.main(version_base=None, config_path="config", config_name="config")
+def run_training(cfg: DictConfig):
+    out_dir = HydraConfig.get().runtime.output_dir
+    logger.debug(
+        f"CWD: {os.getcwd()}, project root: {project_base_dir}, output_dir: "
+        f"{out_dir}"
+    )
 
-        if step % validate_interval == 0:
-            checkpoint_losses = evaluate_val(
-                model=model, dataset=dataset, eval_iters=eval_iters
-            )
-            losses.append(
-                f"Step {step} Train loss: {checkpoint_losses['train']:.4f} | Val loss: {checkpoint_losses['val']:.4f}"
-            )
-            # print(f"Val loss at {step}: {avg_val_loss}")
-
-        model.zero_grad(set_to_none=True)
-        # ^ set to none is default True in 2.0 (should save mem but may cost in allocation?)
-        logits = model(x)
-        loss = model.loss(logits, y)
-        loss.backward()
-        optimizer.step()
-
-    return model, loss.item(), losses
-
-
-if __name__ == "__main__":
-    torch.manual_seed(42)
-
-    data_filename = os.path.join(project_base_dir, "data/input.txt")
+    data_filename = os.path.join(
+        project_base_dir, f"{cfg['data']['data_dir']}/{cfg['data']['data_filename']}"
+    )
     tok = IndexTokenizer()
 
-    context_size = 128
-    batch_size = 32
-    embed_size = 256
-    hidden_size = 4 * embed_size
-    head_size = 64  # was 32 for single attention
-    n_heads = 4
-    n_blocks = 2
-
-    dropout = 0.2
-
-    val_proportion = 0.1
-    validate_interval = 500
-    eval_iters = 50
-    iterations = 5000
-
-    lr = 2e-4
-
-    # device = "cpu"  # much faster on cpu until this size model. with these params cpu 8 mps 18
-    device = available_device()
-    print(device)
+    device = available_device() if cfg["device"] == "available" else cfg["device"]
+    logger.info(f"Device: {device}")
 
     dataset = BasicShakespeareDataset(
         filename=data_filename,
         tokenizer=tok,
-        n_context=context_size,
-        n_batch=batch_size,
-        val_proportion=val_proportion,
         device=device,
+        context_size=cfg["context_size"],
+        **cfg["data"],
     )
 
     model = TransformerMultiBlockLanguageModel(
-        context_size=context_size,
         vocab_size=tok.vocab_size,
-        embed_size=embed_size,
-        head_size=head_size,
-        hidden_size=hidden_size,
-        n_heads=n_heads,
-        n_blocks=n_blocks,
-        dropout=dropout,
+        context_size=cfg["context_size"],
+        **cfg["model"],
     )
     model.to(device)
 
-    inputs = torch.zeros((1, 1), dtype=torch.long, device=device)
-    print("Before\n#####")
-    model.eval()
-    print(tok.decode(model.generate(inputs, max_new_tokens=200)[0]))
-    print("#####\n")
+    # try loading weights
+    if cfg["run"].get("resume") is not None:
+        checkpoint = torch.load(
+            os.path.join(project_base_dir, cfg["run"]["resume"]["path"])
+        )
+        model.load_state_dict(checkpoint["model_state_dict"])
 
-    optimizer = torch.optim.AdamW(params=model.parameters(), lr=lr)
+        optimizer = torch.optim.AdamW(params=model.parameters())
+        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+
+    else:
+        optimizer = torch.optim.AdamW(params=model.parameters(), **cfg["optimizer"])
+
+    #### Before sample #####
+    inputs = torch.zeros((1, 1), dtype=torch.long, device=device)
+    model.eval()
+    logger.info(
+        f"\n##### Before #####\n"
+        f"{tok.decode(model.generate(inputs, max_new_tokens=200)[0])}"
+        f"\n##### Before #####"
+    )
+    #### Before sample #####
+
+    post_hooks = list()
+    if cfg["run"]["validate"]:
+        post_hooks.append(
+            Validate(
+                eval_fn=evaluate_val,
+                **cfg["run"]["validate"],
+            )
+        )
+    if cfg["run"]["checkpoint"]:
+        os.makedirs(os.path.join(os.getcwd(), "checkpoints"), exist_ok=True)
+        post_hooks.append(Checkpoint(**cfg["run"]["checkpoint"]))
 
     model.train()
     trained_model, final_loss, losses = train_language_model(
-        model=model, dataset=dataset, optimizer=optimizer, eval_iters=eval_iters
+        model=model,
+        dataset=dataset,
+        optimizer=optimizer,
+        post_hooks=post_hooks,
+        iterations=cfg["run"]["iterations"],
     )
+    if cfg["save_final"]:
+        torch.save(
+            {
+                "step": cfg["run"]["iterations"],
+                "model_state_dict": trained_model.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "loss": final_loss,
+            },
+            os.path.join(os.getcwd(), os.path.join("checkpoints", "final.pt")),
+        )
 
-    print(f"Final Loss: {final_loss}")
     for item in losses:
-        print(item)
+        logger.info(item)
+    logger.info(f"Final Loss: {final_loss}")
 
+    #### After sample #####
     inputs = torch.zeros((1, 1), dtype=torch.long, device=device)
-    print("\nAfter\n#####")
     trained_model.eval()
-    print(tok.decode(trained_model.generate(inputs, max_new_tokens=200)[0]))
-    print("#####\n")
+    logger.info(
+        f"\n##### After #####\n"
+        f"{tok.decode(trained_model.generate(inputs, max_new_tokens=200)[0])}"
+        f"\n##### After #####"
+    )
+    #### After sample #####
+
+
+if __name__ == "__main__":
+    torch.manual_seed(42)
+    run_training()

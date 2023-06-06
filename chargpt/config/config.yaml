@@ -1,0 +1,22 @@
+defaults:
+  - data: shakespeare
+  - model: gpt_small
+  - optimizer: adamw
+
+run:
+  validate:
+    validate_interval: 500
+    eval_iters: 50
+  checkpoint:
+    checkpoint_interval: 500
+  iterations: 5000
+# if resuming from previous run.
+#  resume:
+#    path: outputs/2023-05-20/23-19-15/checkpoints/final.pt
+
+device: available # choice of available or directly set (cpu | cuda | mps)
+save_final: True
+
+hydra:
+  job:
+    chdir: True

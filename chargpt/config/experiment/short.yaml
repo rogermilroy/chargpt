@@ -1,0 +1,14 @@
+# @package _global_
+
+defaults:
+  - override /data: shakespeare
+  - override /model: gpt_micro
+  - override /optimizer: adamw
+
+context_size: 128
+
+run:
+  validate:
+    validate_interval: 500
+    eval_iters: 50
+  iterations: 1000
