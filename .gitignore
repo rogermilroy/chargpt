@@ -103,16 +103,6 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-# pytorch dataset files.
-testing/testing/processed
-testing/testing/raw
-testing/processed
-testing/raw
-/processed
-/raw
-testing/MNIST
-testing/testing/MNIST
-
 # pycharm files
 .idea
 
@@ -124,3 +114,7 @@ testing/testing/MNIST
 
 # MacOS files
 .DS_Store
+
+# hydra
+outputs/
+
