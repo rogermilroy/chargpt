@@ -20,8 +20,8 @@ class SinCosPositionEncoding(nn.Module):
             emb[:, 2 * i + 1] = torch.cos(pos / 10000 ** (2 * i / embed_size))
         return emb
 
-    def forward(self, t):
-        return self.encoding[:t]
+    def forward(self, t):  # t is Tensor dims (T,)
+        return self.encoding(t)
 
 
 class AttentionHead(nn.Module):
