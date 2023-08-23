@@ -7,6 +7,7 @@ from components import (
     MultiHeadAttention,
     FeedforwardNet,
     TransformerBlock,
+    SinCosPositionEncoding,
 )
 
 
@@ -256,21 +257,40 @@ class TransformerMultiBlockLanguageModel(nn.Module):
         n_heads,
         n_blocks,
         dropout,
+        pos_embedding="sin_cos",
     ):
         """
-
+        Creates a Multi Block Transformer model. That is a stack of MultiHeadAttention
+        Blocks parameterised accordingly.
         :param context_size: dimension of the context (ie. length of an input string)
         :param vocab_size: dimension of the vocabulary
         :param embed_size: dimension of the token and position embeddings
-        :param head_size: dimension of the attention head - usually computed from embed_size and n_heads -
-            embed_size // n_heads. Keeping separate for experimentation.
-        :param n_heads: number of attention heads
+        :param head_size: dimension of the attention head - usually computed from
+            embed_size and n_heads - embed_size // n_heads.
+            Keeping separate for experimentation.
+        :param hidden_size: dimension of the feedforward networks in the Attention
+            blocks
+        :param n_heads: number of attention heads per block
+        :param n_blocks: number of blocks - analogous to depth of the Transformer
+        :param dropout: proportion of dropout applied (to Attention heads and
+            feedforward nets)
+        :param pos_embedding: the position embedding technique used
+            {sin_cos | learned} default sin_cos.
         """
         super().__init__()
         self.context_size = context_size
         self.head_size = head_size
         self.token_embedding = nn.Embedding(vocab_size, embed_size)
-        self.position_embedding = nn.Embedding(context_size, embed_size)
+        if pos_embedding == "learned":
+            self.position_embedding = nn.Embedding(context_size, embed_size)
+        elif pos_embedding == "sin_cos":
+            self.position_embedding = SinCosPositionEncoding(
+                context_size=context_size,
+                embed_size=embed_size
+            )
+        else:
+            raise ValueError(f"pos_embedding must be one of 'learned' or 'sin_cos' "
+                             f"found: {pos_embedding}")
         self.transformer_blocks = nn.Sequential(
             *[
                 TransformerBlock(

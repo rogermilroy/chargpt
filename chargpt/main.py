@@ -83,6 +83,7 @@ def run_training(cfg: DictConfig):
 
     # try loading weights
     if cfg["run"].get("resume") is not None:
+        logger.info(f"resuming from : {cfg['run'].get('resume')}")
         checkpoint = torch.load(
             os.path.join(project_base_dir, cfg["run"]["resume"]["path"])
         )
@@ -92,6 +93,7 @@ def run_training(cfg: DictConfig):
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
     else:
+        logger.info("Starting from scratch")
         optimizer = torch.optim.AdamW(params=model.parameters(), **cfg["optimizer"])
 
     #### Before sample #####

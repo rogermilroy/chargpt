@@ -12,7 +12,7 @@ run:
   iterations: 5000
 # if resuming from previous run.
 #  resume:
-#    path: outputs/2023-05-20/23-19-15/checkpoints/final.pt
+#    path: outputs/2023-06-12/17-00-28/checkpoints/final.pt
 
 context_size: False
 

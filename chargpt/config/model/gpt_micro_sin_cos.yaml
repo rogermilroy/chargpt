@@ -1,5 +1,5 @@
 embed_size: 128
-pos_embedding: learned
+pos_embedding: sin_cos
 hidden_size: 512 # 4 * embed_size
 head_size: 32 # was 32 for single attention
 n_heads: 4

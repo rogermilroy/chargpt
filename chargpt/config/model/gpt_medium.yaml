@@ -1,6 +1,6 @@
-embed_size: 256
+embed_size: 384
 pos_embedding: learned
-hidden_size: 1024 # 4 * embed_size
+hidden_size: 1536 # 4 * embed_size
 head_size: 64 # was 32 for single attention
 n_heads: 4
 n_blocks: 6
