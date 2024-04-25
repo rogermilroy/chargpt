@@ -4,18 +4,20 @@ from torch.nn import functional as F
 
 
 class SinCosPositionEncoding(nn.Module):
-
     def __init__(self, context_size, embed_size):
         super().__init__()
         # generate the positional encoding to select from
         self.encoding = nn.Embedding.from_pretrained(
-                self.get_sin_cos_embeddings(context_size=context_size, embed_size=embed_size))
+            self.get_sin_cos_embeddings(
+                context_size=context_size, embed_size=embed_size
+            )
+        )
 
     @staticmethod
     def get_sin_cos_embeddings(context_size, embed_size):
         emb = torch.zeros(context_size, embed_size, requires_grad=False)
         pos = torch.arange(context_size, requires_grad=False)
-        for i in range(embed_size//2):
+        for i in range(embed_size // 2):
             emb[:, 2 * i] = torch.sin(pos / 10000 ** (2 * i / embed_size))
             emb[:, 2 * i + 1] = torch.cos(pos / 10000 ** (2 * i / embed_size))
         return emb
