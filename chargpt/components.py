@@ -37,8 +37,8 @@ class AttentionHead(nn.Module):
         context_size: int,
         embed_size: int,
         head_size: int,
-        dropout: float,
-        decoder: True,
+        dropout: float | None = None,
+        decoder: bool = True,
     ):
         super().__init__()
         self.head_size = head_size  # H
@@ -49,7 +49,7 @@ class AttentionHead(nn.Module):
         self.register_buffer(
             "mask", torch.tril(torch.ones(context_size, context_size))
         )  # (T, T)
-        self.dropout = nn.Dropout(p=dropout)
+        self.dropout = nn.Dropout(p=dropout) if dropout else None
 
     def forward(self, x):
         _, T, _ = x.shape
@@ -68,7 +68,8 @@ class AttentionHead(nn.Module):
         weights = F.softmax(weights, dim=-1)  # (B, T, T)
         # dropout over the weights (regularization)
         # todo maybe experiment with this more.
-        weights = self.dropout(weights)
+        if self.dropout:
+            weights = self.dropout(weights)
         out = weights @ v  # (B, T, H)
         return out
 
@@ -86,8 +87,8 @@ class MultiHeadAttention(nn.Module):
         embed_size: int,
         head_size: int,
         n_heads: int,
-        dropout: float,
-        decoder: True,
+        dropout: float | None = None,
+        decoder: bool = True,
     ):
         super().__init__()
         self.head_size = head_size  # H
@@ -110,13 +111,14 @@ class MultiHeadAttention(nn.Module):
         )
         # dropout overs the projection -
         # todo experiment with this. Think about interpretability?
-        self.dropout = nn.Dropout(p=dropout)
+        self.dropout = nn.Dropout(p=dropout) if dropout else None
 
     def forward(self, x):
         x = torch.cat([head(x) for head in self.heads], dim=-1)  # (B, T, H * N)
         x = self.out_layer(x)  # (B, T, C)
-        out = self.dropout(x)
-        return out
+        if self.dropout:
+            x = self.dropout(x)
+        return x
 
 
 class FeedforwardNet(nn.Module):
