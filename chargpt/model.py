@@ -1,8 +1,8 @@
 import torch
-from torch import nn
+from torch import dropout, nn
 from torch.nn import functional as F
 
-from components import (
+from chargpt.components import (
     AttentionHead,
     MultiHeadAttention,
     FeedforwardNet,
@@ -203,7 +203,7 @@ class MultiHeadAttentionFFLanguageModel(nn.Module):
             decoder=True,
         )
         self.feedforward = FeedforwardNet(
-            embed_size=embed_size, hidden_size=hidden_size
+            embed_size=embed_size, hidden_size=hidden_size, dropout=0.0
         )
         self.output_layer = nn.Linear(in_features=embed_size, out_features=vocab_size)
 

@@ -6,14 +6,14 @@ import torch
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig
 
-from dataset import BasicShakespeareDataset
-from hooks import Validate, Checkpoint
-from model import (
+from chargpt.dataset import BasicShakespeareDataset
+from chargpt.hooks import Validate, Checkpoint
+from chargpt.model import (
     BigramLanguageModel,
     TransformerMultiBlockLanguageModel,
 )
-from tokenizer import IndexTokenizer
-from train import train_language_model
+from chargpt.tokenizer import IndexTokenizer
+from chargpt.train import train_language_model
 
 project_base_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -22,9 +22,9 @@ logger = logging.getLogger(__name__)
 
 
 def available_device() -> str:
-    if torch.has_mps:
+    if torch.backends.mps.is_built():
         return "mps"
-    elif torch.has_cuda:
+    elif torch.backends.cuda.is_built():
         return "cuda"
     else:
         return "cpu"

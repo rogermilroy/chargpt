@@ -5,7 +5,7 @@ import torch
 from torch import Tensor
 from torch.utils.data import Dataset
 
-from tokenizer import Tokenizer, IndexTokenizer
+from chargpt.tokenizer import Tokenizer, IndexTokenizer
 
 project_base_dir = os.path.dirname(os.path.abspath(__file__))
 

@@ -14,7 +14,7 @@ run:
 #  resume:
 #    path: outputs/2023-06-12/17-00-28/checkpoints/final.pt
 
-context_size: False
+context_size: 128
 
 device: available # choice of available or directly set (cpu | cuda | mps)
 save_final: True
