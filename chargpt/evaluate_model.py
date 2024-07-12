@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 import torch
-from omegaconf import OmegaConf
+from omegaconf import DictConfig, OmegaConf
 
 from chargpt.dataset import BasicShakespeareDataset
 from chargpt.model import TransformerMultiBlockLanguageModel
@@ -28,7 +28,7 @@ def evaluate(model, tokenizer, device, num_tokens):
 
 
 def setup_evaluation(checkpoint_dir: Path, checkpoint: str):
-    config = OmegaConf.load(checkpoint_dir / ".hydra" / "config.yaml")
+    config: DictConfig = OmegaConf.load(checkpoint_dir / ".hydra" / "config.yaml")  # type: ignore
     # device = available_device() if config["device"] == "available" else config[
     #     "device"]
     device = torch.device("cpu")
@@ -41,7 +41,7 @@ def setup_evaluation(checkpoint_dir: Path, checkpoint: str):
     _ = BasicShakespeareDataset(
         filename=data_filename,
         tokenizer=tok,
-        device=device,
+        device=device,  # type: ignore
         context_size=config["context_size"],
         **config["data"],
     )
@@ -54,7 +54,7 @@ def setup_evaluation(checkpoint_dir: Path, checkpoint: str):
 
     checkpoint = torch.load(checkpoint_dir / "checkpoints" / checkpoint)
 
-    model.load_state_dict(checkpoint["model_state_dict"])
+    model.load_state_dict(checkpoint["model_state_dict"])  # type: ignore
     model.to(device=device)
 
     return model, tok, device
@@ -73,9 +73,9 @@ if __name__ == "__main__":
     checkpoint = "checkpoint_7000.pt"
 
     # num_tokens = 256
-    # num_tokens = 512
+    num_tokens = 512
     # num_tokens = 1024
-    num_tokens = 2048
+    # num_tokens = 2048
     # num_tokens = 4096
 
     model, tok, device = setup_evaluation(checkpoint_dir, checkpoint)
