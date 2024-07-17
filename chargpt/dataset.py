@@ -1,25 +1,79 @@
 import os
-from typing import Tuple
+from typing import Sized, Tuple, Sequence
 
 import torch
 from torch import Tensor
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, Subset, DataLoader
 
 from chargpt.tokenizer import Tokenizer, IndexTokenizer
 
 project_base_dir = os.path.dirname(os.path.abspath(__file__))
 
 
-class ShakespeareDataset(Dataset):
-    def __init__(self, file_location, tokenizer: Tokenizer):
+class SizedDataset(Dataset, Sized):
+    ...
+
+
+class SizedSubset(Subset, Sized):
+    def __init__(self, dataset: Dataset, indices: Sequence[int]) -> None:  # type: ignore
+        super().__init__(dataset, indices)
+        self._size = len(indices)
+
+    def __len__(self):
+        return self._size
+
+
+def partition_dataset(
+    dataset: SizedDataset | SizedSubset,
+    test_proportion: float,
+    context_size: int,
+) -> Tuple[SizedSubset, SizedSubset]:
+    train = SizedSubset(
+        dataset,
+        range(round(len(dataset) * (1 - test_proportion)) - context_size),
+    )
+    test = SizedSubset(
+        dataset, range(round(len(dataset) * (1 - test_proportion)) + 1, len(dataset))
+    )
+
+    return train, test
+
+
+class ShakespeareDataset(SizedDataset):
+    def __init__(
+        self,
+        filename,
+        tokenizer: Tokenizer,
+        context_size: int,
+        device: str | torch.device = "cpu",
+    ):
         self.tokenizer = tokenizer
-        with open(file_location, "r", encoding="utf8") as f:
+        with open(filename, "r", encoding="utf8") as f:
             data = f.read()
         self.tokenizer.fit(data)
-        self.encoded_data = self.tokenizer.encode(data)
+        encoded_data = torch.tensor(
+            self.tokenizer.encode(data), dtype=torch.long, device="cpu"
+        )
+        # here stack sections of context size TODO find more efficient way to do this.
+        self.x = torch.stack(
+            [
+                encoded_data[idx : idx + context_size]
+                for idx in range(len(encoded_data) - context_size)
+            ]
+        ).to(device=device)
 
-    def __getitem__(self, index) -> Tensor:
-        ...
+        self.y = torch.stack(
+            [
+                encoded_data[idx + 1 : idx + context_size + 1]
+                for idx in range(len(encoded_data) - context_size)
+            ]
+        ).to(device=device)
+
+    def __len__(self) -> int:
+        return len(self.x)
+
+    def __getitem__(self, index) -> Tuple[Tensor, Tensor]:
+        return self.x[index], self.y[index]
 
 
 # Basic data handling functionality - for the initial implementation
@@ -96,6 +150,22 @@ if __name__ == "__main__":
     batch_size = 4
     val_proportion = 0.1
 
+    base_dataset = ShakespeareDataset(
+        filename=data_filename,
+        tokenizer=tokenizer,
+        context_size=context_len,
+    )
+
+    # subsets for train/test
+    train, test = partition_dataset(
+        base_dataset,
+        test_proportion=val_proportion,
+        context_size=context_len,
+    )
+
+    train_dataloader = DataLoader(train, batch_size=batch_size, shuffle=True)
+    test_dataloader = DataLoader(test, batch_size=batch_size, shuffle=True)
+
     dataset = BasicShakespeareDataset(
         filename=data_filename,
         tokenizer=tokenizer,
@@ -104,6 +174,8 @@ if __name__ == "__main__":
         val_proportion=val_proportion,
     )
     x, y = dataset.get_batch(split="train")
+
+    x_dl, y_dl = next(iter(train_dataloader))
 
     print(f"x shape: {x.shape}\n" f"x      : {x}")
     print(f"y shape: {y.shape}\n" f"y      : {y}")

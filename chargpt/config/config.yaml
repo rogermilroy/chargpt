@@ -3,18 +3,34 @@ defaults:
   - model: gpt_small
   - optimizer: adamw
 
-run:
-  validate:
-    validate_interval: 500
-    eval_iters: 50
-  checkpoint:
-    checkpoint_interval: 500
-  iterations: 5000
-# if resuming from previous run.
-#  resume:
-#    path: outputs/2023-06-12/17-00-28/checkpoints/final.pt
+# run specification - validation intervals and iterations, checkpointing and resuming.
+# experiment - to test if I can override individual things in the base config.
+model.pos_embedding: sin_cos
 
-context_size: 128
+hooks:
+  validate:
+    interval: 500
+  train_loss:
+    interval: 500
+  checkpoint:
+    interval: 500
+  sample:
+    interval: 500
+    tokens: 100
+
+dataloading:
+  batch_size: 32
+  shuffle: True
+run:
+  # NOTE non integer epochs turns into minibatch limit
+  epochs: 0.2
+
+  # if resuming from previous run.
+  #  resume:
+  #    path: outputs/2023-06-12/17-00-28/checkpoints/final.pt
+
+shared:
+  context_size: 128
 
 device: available # choice of available or directly set (cpu | cuda | mps)
 save_final: True

@@ -1,15 +1,16 @@
+from collections import defaultdict
 import logging
 import os
 
 import hydra
 import torch
+from torch.utils.data import DataLoader
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig
 
-from chargpt.dataset import BasicShakespeareDataset
-from chargpt.hooks import Validate, Checkpoint
+from chargpt.dataset import ShakespeareDataset, partition_dataset
+from chargpt.hooks import Checkpoint, TextSample, TrainingMetric, ValidationMetric
 from chargpt.model import (
-    BigramLanguageModel,
     TransformerMultiBlockLanguageModel,
 )
 from chargpt.tokenizer import IndexTokenizer
@@ -30,26 +31,6 @@ def available_device() -> str:
         return "cpu"
 
 
-@torch.no_grad()
-def evaluate_val(
-    model: BigramLanguageModel, dataset: BasicShakespeareDataset, eval_iters
-):
-    model.eval()
-
-    out = dict()
-    for split in ["train", "val"]:
-        losses = torch.zeros(eval_iters)
-        for i in range(eval_iters):
-            x, y = dataset.get_batch(split)
-            logits = model(x)
-            loss = model.loss(logits=logits, targets=y)
-            losses[i] = loss.item()
-        out[split] = losses.mean()
-
-    model.train()
-    return out
-
-
 @hydra.main(version_base=None, config_path="config", config_name="config")
 def run_training(cfg: DictConfig):
     out_dir = HydraConfig.get().runtime.output_dir
@@ -66,17 +47,28 @@ def run_training(cfg: DictConfig):
     device = available_device() if cfg["device"] == "available" else cfg["device"]
     logger.info(f"Device: {device}")
 
-    dataset = BasicShakespeareDataset(
+    base_dataset = ShakespeareDataset(
         filename=data_filename,
         tokenizer=tok,
         device=device,
-        context_size=cfg["context_size"],
-        **cfg["data"],
+        **cfg["shared"],
     )
+
+    train, test = partition_dataset(
+        base_dataset, test_proportion=cfg["data"]["test_proportion"], **cfg["shared"]
+    )
+
+    train, val = partition_dataset(train, test_proportion=cfg["data"]["val_proportion"], **cfg["shared"])  # type: ignore
+
+    train_dataloader = DataLoader(train, **cfg["dataloading"])
+    val_dataloader = DataLoader(val, **cfg["dataloading"])
+    test_dataloader = DataLoader(test, **cfg["dataloading"])
+
+    sample_tokens = 200
 
     model = TransformerMultiBlockLanguageModel(
         vocab_size=tok.vocab_size,
-        context_size=cfg["context_size"],
+        **cfg["shared"],
         **cfg["model"],
     )
     model.to(device)
@@ -96,57 +88,103 @@ def run_training(cfg: DictConfig):
         logger.info("Starting from scratch")
         optimizer = torch.optim.AdamW(params=model.parameters(), **cfg["optimizer"])
 
-    #### Before sample #####
-    inputs = torch.zeros((1, 1), dtype=torch.long, device=device)
-    model.eval()
-    logger.info(
-        f"\n##### Before #####\n"
-        f"{tok.decode(model.generate(inputs, max_new_tokens=200)[0])}"
-        f"\n##### Before #####"
-    )
-    #### Before sample #####
-
+    # TODO - extract hooks setup into a helper function?
     post_hooks = list()
-    if cfg["run"]["validate"]:
+    metrics_dict = defaultdict(dict)
+    samples = dict()
+    if cfg["hooks"]["validate"]:
         post_hooks.append(
-            Validate(
-                eval_fn=evaluate_val,
-                **cfg["run"]["validate"],
+            ValidationMetric(
+                metrics_dict=metrics_dict,
+                dataloader=val_dataloader,
+                interval=cfg["hooks"]["validate"]["interval"],
             )
         )
-    if cfg["run"]["checkpoint"]:
+        post_hooks.append(
+            TrainingMetric(
+                metrics_dict=metrics_dict,
+                interval=cfg["hooks"]["validate"]["interval"],
+                dataloader=val_dataloader,
+            )
+        )
+    if cfg["hooks"]["sample"]:
+        post_hooks.append(
+            TextSample(
+                samples=samples,
+                device=device,
+                tokenizer=tok,
+                **cfg["hooks"]["sample"],
+                **cfg["shared"],
+            )
+        )
+    if cfg["hooks"]["checkpoint"]:
         os.makedirs(os.path.join(os.getcwd(), "checkpoints"), exist_ok=True)
-        post_hooks.append(Checkpoint(**cfg["run"]["checkpoint"]))
+        post_hooks.append(Checkpoint(**cfg["hooks"]["checkpoint"]))
 
     model.train()
-    trained_model, final_loss, losses = train_language_model(
+    trained_model, test_loss = train_language_model(
+        epochs=cfg["run"]["epochs"],
         model=model,
-        dataset=dataset,
         optimizer=optimizer,
+        train_dataloader=train_dataloader,
+        test_dataloader=test_dataloader,
         post_hooks=post_hooks,
-        iterations=cfg["run"]["iterations"],
     )
     if cfg["save_final"]:
         torch.save(
             {
-                "step": cfg["run"]["iterations"],
+                "epoch": cfg["run"]["epochs"],
+                "minibatch": len(
+                    train_dataloader
+                ),  # TODO think more about this - sub integer epochs...
                 "model_state_dict": trained_model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
-                "loss": final_loss,
+                "test_loss": test_loss,
             },
+            # TODO maybe change filename to match normal naming scheme?
             os.path.join(os.getcwd(), os.path.join("checkpoints", "final.pt")),
         )
 
-    for item in losses:
-        logger.info(item)
-    logger.info(f"Final Loss: {final_loss}")
+    # TODO remove all this - when flushing losses directly in hooks
+
+    ### process the metrics in the metrics dict. Output them
+    metric_pretty_pre = {
+        "training_loss": "Training Loss:",
+        "validation_loss": "Validation Loss:",
+    }
+    metric_pretty_post = {
+        "training_loss": " | ",
+        "validation_loss": " | ",
+    }
+    # TODO fix cumulative tokens.
+    for key, metrics_values in metrics_dict.items():
+        epoch, minibatch = key
+        output = []
+        output.append(
+            f"Epoch: {epoch} Minibatch: {minibatch} Cumulative Tokens: {minibatch * cfg['shared']['context_size'] * cfg['dataloading']['batch_size']} | "
+        )
+        for metric, value in metrics_values.items():
+            output.append(
+                f"{metric_pretty_pre[metric]} {value:.4f} {metric_pretty_post[metric]}"
+            )
+        logger.info("".join(output))
+
+    # TODO simplify this more?
+    for key, sample in samples.items():
+        epoch, minibatch = key
+        output = []
+        output.append(
+            f"Epoch: {epoch} Minibatch: {minibatch} Cumulative Tokens: {minibatch * cfg['shared']['context_size'] * cfg['dataloading']['batch_size']}\n"
+        )
+        output.append(f"### Sample ###\n{sample}\n### End Sample ###")
+        logger.info("".join(output))
 
     #### After sample #####
     inputs = torch.zeros((1, 1), dtype=torch.long, device=device)
     trained_model.eval()
     logger.info(
         f"\n##### After #####\n"
-        f"{tok.decode(trained_model.generate(inputs, max_new_tokens=200)[0])}"
+        f"{tok.decode(trained_model.generate(inputs, tokens=200)[0])}"
         f"\n##### After #####"
     )
     #### After sample #####

@@ -1,11 +1,12 @@
 import logging
 import os
 from pathlib import Path
+from typing import Dict
 
 import torch
-from omegaconf import OmegaConf
+from omegaconf import DictConfig, OmegaConf
 
-from chargpt.dataset import BasicShakespeareDataset
+from chargpt.dataset import BasicShakespeareDataset, ShakespeareDataset
 from chargpt.model import TransformerMultiBlockLanguageModel
 from chargpt.tokenizer import IndexTokenizer
 
@@ -21,14 +22,14 @@ def evaluate(model, tokenizer, device, num_tokens):
     model.eval()
     print(
         f"\n##### After #####\n"
-        f"{tokenizer.decode(model.generate(inputs, max_new_tokens=num_tokens)[0])}"
+        f"{tokenizer.decode(model.generate(inputs, tokens=num_tokens)[0])}"
         f"\n##### After #####"
     )
     #### After sample #####
 
 
 def setup_evaluation(checkpoint_dir: Path, checkpoint: str):
-    config = OmegaConf.load(checkpoint_dir / ".hydra" / "config.yaml")
+    config: DictConfig = OmegaConf.load(checkpoint_dir / ".hydra" / "config.yaml")  # type: ignore
     # device = available_device() if config["device"] == "available" else config[
     #     "device"]
     device = torch.device("cpu")
@@ -38,23 +39,22 @@ def setup_evaluation(checkpoint_dir: Path, checkpoint: str):
         f"{config['data']['data_dir']}/" f"{config['data']['data_filename']}",
     )
 
-    _ = BasicShakespeareDataset(
+    _ = ShakespeareDataset(
         filename=data_filename,
         tokenizer=tok,
         device=device,
-        context_size=config["context_size"],
-        **config["data"],
+        **config["shared"],
     )
 
     model = TransformerMultiBlockLanguageModel(
         vocab_size=tok.vocab_size,
-        context_size=config["context_size"],
+        **config["shared"],
         **config["model"],
     )
 
-    checkpoint = torch.load(checkpoint_dir / "checkpoints" / checkpoint)
+    checkpoint_dict: Dict = torch.load(checkpoint_dir / "checkpoints" / checkpoint)
 
-    model.load_state_dict(checkpoint["model_state_dict"])
+    model.load_state_dict(checkpoint_dict["model_state_dict"])
     model.to(device=device)
 
     return model, tok, device

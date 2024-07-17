@@ -1,5 +1,5 @@
 data_dir: data
 data_filename: input.txt
 
-batch_size: 32
-val_proportion: 0.1
+val_proportion: 0.01  # this is ~300 iterations with batch_size 32
+test_proportion: 0.01 # this is ~300 iterations with batch_size 32

@@ -1,5 +1,7 @@
+from abc import ABC, abstractmethod
+from typing import Any
 import torch
-from torch import dropout, nn
+from torch import Tensor, nn
 from torch.nn import functional as F
 
 from chargpt.components import (
@@ -11,7 +13,25 @@ from chargpt.components import (
 )
 
 
-class BigramLanguageModel(nn.Module):
+class LanguageModel(ABC):
+    @abstractmethod
+    def forward(self, *args, **kwargs) -> Tensor:
+        ...
+
+    @abstractmethod
+    def loss(self, logits: Any, targets: Any) -> Tensor:
+        ...
+
+    @abstractmethod
+    def generate(self, *args, **kwargs) -> Tensor:
+        ...
+
+
+class TorchLanguageModel(nn.Module, LanguageModel):
+    ...
+
+
+class BigramLanguageModel(TorchLanguageModel):
     def __init__(self, vocab_size):
         super().__init__()
         # vocab_size x vocab_size table (direct probs for each char based on
@@ -30,8 +50,8 @@ class BigramLanguageModel(nn.Module):
         targets = targets.view(b * t)
         return F.cross_entropy(logits, targets)
 
-    def generate(self, x, max_new_tokens):
-        for _ in range(max_new_tokens):
+    def generate(self, x, tokens):
+        for _ in range(tokens):
             logits = self(x)  # logits (B, T, C) C is output options
 
             logits = logits[:, -1, :]  # select last time step from logits (B, 1, C)
@@ -44,7 +64,7 @@ class BigramLanguageModel(nn.Module):
         return x
 
 
-class AttentionLanguageModel(nn.Module):
+class AttentionLanguageModel(TorchLanguageModel):
     # B: batch size
     # T: time dimension - context_len
     # C: channels - n_embed (or head size of previous layer)
@@ -89,8 +109,8 @@ class AttentionLanguageModel(nn.Module):
         targets = targets.view(b * t)
         return F.cross_entropy(logits, targets)
 
-    def generate(self, x, max_new_tokens):
-        for _ in range(max_new_tokens):
+    def generate(self, x, tokens):
+        for _ in range(tokens):
             # left trim x to be last n_context tokens
             x_trim = x[:, -self.context_size :]
 
@@ -106,7 +126,7 @@ class AttentionLanguageModel(nn.Module):
         return x
 
 
-class MultiHeadAttentionLanguageModel(nn.Module):
+class MultiHeadAttentionLanguageModel(TorchLanguageModel):
     # B: batch size
     # T: time dimension - context_len
     # C: channels - n_embed (or head size of previous layer)
@@ -154,8 +174,8 @@ class MultiHeadAttentionLanguageModel(nn.Module):
         targets = targets.view(b * t)
         return F.cross_entropy(logits, targets)
 
-    def generate(self, x, max_new_tokens):
-        for _ in range(max_new_tokens):
+    def generate(self, x, tokens):
+        for _ in range(tokens):
             # left trim x to be last n_context tokens
             x_trim = x[:, -self.context_size :]
 
@@ -171,7 +191,7 @@ class MultiHeadAttentionLanguageModel(nn.Module):
         return x
 
 
-class MultiHeadAttentionFFLanguageModel(nn.Module):
+class MultiHeadAttentionFFLanguageModel(TorchLanguageModel):
     # B: batch size
     # T: time dimension - context_len
     # C: channels - n_embed (or head size of previous layer)
@@ -224,8 +244,8 @@ class MultiHeadAttentionFFLanguageModel(nn.Module):
         targets = targets.view(b * t)
         return F.cross_entropy(logits, targets)
 
-    def generate(self, x, max_new_tokens):
-        for _ in range(max_new_tokens):
+    def generate(self, x, tokens):
+        for _ in range(tokens):
             # left trim x to be last n_context tokens
             x_trim = x[:, -self.context_size :]
 
@@ -241,7 +261,7 @@ class MultiHeadAttentionFFLanguageModel(nn.Module):
         return x
 
 
-class TransformerMultiBlockLanguageModel(nn.Module):
+class TransformerMultiBlockLanguageModel(TorchLanguageModel):
     # B: batch size
     # T: time dimension - context_len
     # C: channels - n_embed (or head size of previous layer)
@@ -327,8 +347,8 @@ class TransformerMultiBlockLanguageModel(nn.Module):
         targets = targets.view(b * t)
         return F.cross_entropy(logits, targets)
 
-    def generate(self, x, max_new_tokens):
-        for _ in range(max_new_tokens):
+    def generate(self, x, tokens):
+        for _ in range(tokens):
             # left trim x to be last n_context tokens
             x_trim = x[:, -self.context_size :]
 
